@@ -1,0 +1,15 @@
+{
+  "name": "p2p-peer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Peer node — TCP P2P + đăng ký bootstrap",
+  "main": "peer.js",
+  "scripts": {
+    "start": "node peer.js",
+    "churn": "node ../scripts/churn.js"
+  },
+  "dependencies": {
+    "sqlite": "^5.1.1",
+    "sqlite3": "^6.0.1"
+  }
+}
