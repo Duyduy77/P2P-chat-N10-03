@@ -1,6 +1,6 @@
-/**
+/
  * Bootstrap / tracker: chỉ phục vụ discovery + trạng thái online.
- * Chat thật không đi qua đây — đúng với mô hình P2P trong đề.
+ * Chat thật không đi qua đây
  */
 const http = require('http');
 
