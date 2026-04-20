@@ -1,4 +1,4 @@
-/
+/**
  * Bootstrap / tracker: chỉ phục vụ discovery + trạng thái online.
  * Chat thật không đi qua đây
  */
