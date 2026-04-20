@@ -126,9 +126,6 @@ Tham số cuối là số vòng lặp (tùy chọn).
 
 Nếu chưa thấy peer trong cache: `sync` hoặc `join` tới cổng TCP của peer kia.
 
-## Báo cáo đồ án
-
-Báo cáo (kiến trúc, giao thức, discovery, xử lý lỗi & thử nghiệm) nộp riêng theo yêu cầu giảng viên; README này phục vụ **mã nguồn + hướng dẫn chạy**.
 
 ## Giới hạn đáng ghi trong báo cáo
 
