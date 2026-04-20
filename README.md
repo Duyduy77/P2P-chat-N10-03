@@ -21,7 +21,7 @@ Mạng chat ngang hàng: peer trao đổi tin qua **TCP**; **bootstrap/tracker**
 
 ## Cài đặt
 
-Sau khi **clone** repo, thư mục `peer-node/node_modules` thường **không có** (không đẩy lên Git). Mỗi máy cần cài dependency một lần:
+Sau khi **clone** repo, thư mục `peer-node/node_modules` thường **không có**. Mỗi máy cần cài dependency một lần:
 
 ```powershell
 Set-Location "E:\HTPT BTL\peer-node"
