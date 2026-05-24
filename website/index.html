@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P2P-Chat — Live Chat Terminal</title>
+  <meta name="description" content="A professional, minimalist, and secure decentralized Peer-to-Peer chat client interface communicating over raw TCP sockets.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="chat-page-body">
+
+  <!-- Top Navigation -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="logo">
+        <span class="logo-icon">✦</span>
+        <span class="logo-text">P2P.Chat</span>
+      </a>
+      <div class="nav-links-center">
+        <span class="nav-page-title">Live Chat Terminal</span>
+        <span class="badge offline" id="connectionBadge" style="margin-left: 0.5rem;">Offline</span>
+      </div>
+      <div class="nav-actions">
+        <a href="showcase.html" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Showcase & Simulator ➔</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Offline State Overlay -->
+  <div class="offline-overlay" id="offlineOverlay">
+    <div class="offline-card">
+      <div class="offline-icon-spinner"></div>
+      <h3>Connecting to local Peer Node...</h3>
+      <p>This web dashboard communicates with a running peer process REST API.</p>
+      
+      <div class="offline-guide-box">
+        <h5>How to start your peer node:</h5>
+        <pre><code>cd peer-node
+$env:PEER_ID="alice"
+$env:LISTEN_PORT="4101"
+$env:BOOTSTRAP_URL="http://127.0.0.1:3020"
+$env:WEB_PORT="8081"
+node peer.js</code></pre>
+      </div>
+
+      <div class="offline-ctas">
+        <a href="showcase.html" class="btn btn-primary">View Setup Guide & P2P Simulator</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Chat Layout Grid -->
+  <main class="live-chat-grid">
+    
+    <!-- Sidebar - Contacts & Groups -->
+    <aside class="chat-sidebar">
+      
+      <!-- Node Status Info -->
+      <div class="current-peer-card">
+        <div class="peer-header">
+          <div class="peer-avatar" id="localAvatar">?</div>
+          <div class="peer-details">
+            <h4 id="localPeerId">Connecting...</h4>
+            <p id="localPeerAddress">127.0.0.1:----</p>
+          </div>
+        </div>
+        <div class="tracker-status-bar">
+          <span class="dot-indicator online" id="trackerIndicator"></span>
+          <span id="trackerText">Tracker: http://127.0.0.1:3020</span>
+        </div>
+      </div>
+
+      <!-- Section: Quick Actions (Join Peer) -->
+      <div class="sidebar-section">
+        <h4 class="sidebar-section-title">Join Peer Network</h4>
+        <form id="joinPeerForm" class="sidebar-form">
+          <div class="input-row">
+            <input type="text" id="joinHost" placeholder="127.0.0.1" value="127.0.0.1" required>
+            <input type="number" id="joinPort" placeholder="Port" required>
+            <button type="submit" class="btn btn-form">Join</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Section: Group Actions (Add Group) -->
+      <div class="sidebar-section">
+        <h4 class="sidebar-section-title">Create Local Group</h4>
+        <form id="groupAddForm" class="sidebar-form">
+          <input type="text" id="groupNameInput" placeholder="Group ID (e.g. dev-team)" required>
+          <div class="members-selector" id="groupMembersCheckboxes">
+            <!-- Checkboxes populated via JS -->
+            <p class="text-muted">No other peers online</p>
+          </div>
+          <button type="submit" class="btn btn-form-block">Create Group</button>
+        </form>
+      </div>
+
+      <!-- Contacts List -->
+      <div class="sidebar-section list-section">
+        <div class="section-title-bar">
+          <h4 class="sidebar-section-title">Peers Directory</h4>
+          <button class="btn-icon-reload" onclick="refreshSnapshot()">🔄</button>
+        </div>
+        <div class="contacts-list" id="contactsList">
+          <!-- Dynamically populated contacts -->
+          <p class="empty-list-text">No cached peers found. Use Sync or Join to populate.</p>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Main Chat Area -->
+    <section class="chat-main">
+      
+      <!-- Chat Target Header -->
+      <div class="chat-header">
+        <div class="target-info">
+          <h3 id="chatTargetName">Select a target to start chatting</h3>
+          <p id="chatTargetSub">Messages travel directly over dedicated TCP channels</p>
+        </div>
+        <div class="target-actions">
+          <span class="badge" id="chatTargetType">TCP Direct</span>
+        </div>
+      </div>
+
+      <!-- Message History -->
+      <div class="message-pane" id="messagePane">
+        <!-- Messages populated via JS -->
+        <div class="pane-placeholder">
+          <div class="placeholder-icon">💬</div>
+          <h4>No Active Chat</h4>
+          <p>Select an online peer, group, or choose Broadcast to transmit packets.</p>
+        </div>
+      </div>
+
+      <!-- Send Message Form -->
+      <form id="sendMessageForm" class="chat-input-bar">
+        <input type="text" id="messageInput" placeholder="Type your message here..." autocomplete="off" disabled>
+        <button type="submit" id="sendBtn" class="btn btn-send" disabled>
+          <span>Send</span>
+          <svg class="send-icon" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+        </button>
+      </form>
+
+    </section>
+
+    <!-- Right Console Logs -->
+    <aside class="chat-console">
+      <div class="console-title-bar">
+        <span>💻 Peer Process Event Logs</span>
+        <span class="badge live-badge">Live Feed</span>
+      </div>
+      <div class="console-body" id="liveConsoleLog">
+        <div class="log-entry">// Terminal process outputs will render here...</div>
+      </div>
+    </aside>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

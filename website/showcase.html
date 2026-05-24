@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P2P-Chat — Showcase & Simulator</title>
+  <meta name="description" content="A professional, minimalist, and secure decentralized Peer-to-Peer chat protocol built on raw TCP with SQLite store-and-forward outbox.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="showcase.html" class="logo">
+        <span class="logo-icon">✦</span>
+        <span class="logo-text">P2P.Chat</span>
+      </a>
+      <div class="nav-links-center">
+        <span class="nav-page-title">Project Showcase & Simulator</span>
+      </div>
+      <div class="nav-actions">
+        <a href="index.html" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem; box-shadow: none;">Open Live Chat ➔</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Showcase Content -->
+  <main class="main-content">
+    
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-bg-glow"></div>
+      <div class="hero-content">
+        <div class="tagline">✦ Decentralized TCP Communication Protocol</div>
+        <h1 class="hero-title">Pure Peer-to-Peer Chat. No Middlemen.</h1>
+        <p class="hero-subtitle">
+          A secure, minimalist P2P system utilizing an HTTP tracker for bootstrap and direct TCP streams for reliable application-layer message delivery. 
+        </p>
+        <div class="hero-ctas">
+          <a href="#quickstart" class="btn btn-primary">Get Started CLI</a>
+          <button class="btn btn-secondary" onclick="scrollToSimulator()">Run Simulator</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Network Simulator -->
+    <section class="simulator-section" id="simulator">
+      <div class="section-header">
+        <h2 class="section-title">Interactive Protocol Simulator</h2>
+        <p class="section-desc">Visualize how packets travel, HELLO handshakes complete, and ACKs secure transmission directly in a simulated grid.</p>
+      </div>
+
+      <div class="simulator-container">
+        <div class="simulator-controls">
+          <h3>Protocol Commands</h3>
+          <div class="sim-actions">
+            <button class="sim-btn" onclick="simDirectChat()">
+              <span class="sim-icon">💬</span>
+              <span class="sim-label">Direct TCP Chat</span>
+              <span class="sim-detail">Alice ➔ Bob (Direct TCP)</span>
+            </button>
+            <button class="sim-btn" onclick="simRelayChat()">
+              <span class="sim-icon">🔄</span>
+              <span class="sim-label">1-Hop Relay Chat</span>
+              <span class="sim-detail">Alice ➔ Bob (via Charlie)</span>
+            </button>
+            <button class="sim-btn" onclick="simBroadcast()">
+              <span class="sim-icon">📢</span>
+              <span class="sim-label">Network Broadcast</span>
+              <span class="sim-detail">Alice ➔ All Peers (TTL flood)</span>
+            </button>
+            <button class="sim-btn" onclick="simStoreForward()">
+              <span class="sim-icon">💾</span>
+              <span class="sim-label">Store & Forward</span>
+              <span class="sim-detail">Offline queue in SQLite db</span>
+            </button>
+          </div>
+          
+          <div class="sim-reset-container">
+            <button class="btn-text" onclick="resetSimulator()">Clear Terminal Logs</button>
+          </div>
+        </div>
+
+        <div class="simulator-canvas-pane">
+          <div class="network-canvas" id="networkCanvas">
+            <!-- Network Connection Lines -->
+            <svg class="network-svg" id="networkSvg">
+              <line id="line-alice-tracker" class="net-line" x1="120" y1="280" x2="350" y2="100"></line>
+              <line id="line-bob-tracker" class="net-line" x1="580" y1="280" x2="350" y2="100"></line>
+              <line id="line-charlie-tracker" class="net-line" x1="350" y1="410" x2="350" y2="100"></line>
+              <line id="line-alice-bob" class="net-line" x1="120" y1="280" x2="580" y2="280"></line>
+              <line id="line-alice-charlie" class="net-line" x1="120" y1="280" x2="350" y2="410"></line>
+              <line id="line-bob-charlie" class="net-line" x1="580" y1="280" x2="350" y2="410"></line>
+            </svg>
+
+            <!-- Tracker Node -->
+            <div class="node node-tracker" id="node-tracker">
+              <div class="node-icon">☁️</div>
+              <div class="node-label">Bootstrap Tracker</div>
+              <div class="node-ip">127.0.0.1:3020</div>
+            </div>
+
+            <!-- Peer Node: Alice -->
+            <div class="node node-peer" id="node-alice" style="left: 60px; top: 230px;">
+              <div class="node-avatar">A</div>
+              <div class="node-label">Alice</div>
+              <div class="node-ip">127.0.0.1:4101</div>
+              <div class="node-status-dot online"></div>
+            </div>
+
+            <!-- Peer Node: Bob -->
+            <div class="node node-peer" id="node-bob" style="left: 520px; top: 230px;">
+              <div class="node-avatar">B</div>
+              <div class="node-label">Bob</div>
+              <div class="node-ip">127.0.0.1:4102</div>
+              <div class="node-status-dot online" id="bob-status-dot"></div>
+            </div>
+
+            <!-- Peer Node: Charlie (Relay) -->
+            <div class="node node-peer" id="node-charlie" style="left: 290px; top: 360px;">
+              <div class="node-avatar">C</div>
+              <div class="node-label">Charlie</div>
+              <div class="node-ip">127.0.0.1:4103</div>
+              <div class="node-status-dot online"></div>
+            </div>
+
+            <!-- Animated Packet -->
+            <div class="packet" id="packet"></div>
+          </div>
+          
+          <!-- Simulator Terminal -->
+          <div class="sim-terminal">
+            <div class="terminal-header">
+              <span class="terminal-dot red"></span>
+              <span class="terminal-dot yellow"></span>
+              <span class="terminal-dot green"></span>
+              <span class="terminal-title">Protocol Console Stream</span>
+            </div>
+            <div class="terminal-body" id="simTerminalLog">
+              <div class="log-line text-muted">// Click a protocol command on the left to start visualization...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Grid -->
+    <section class="features-section">
+      <div class="section-header">
+        <h2 class="section-title">Core Protocol Specs</h2>
+        <p class="section-desc">Architected for light footprint, high speed, and direct socket routing without centralized overhead.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🛡️</div>
+          <h3>AES-256-GCM Encryption</h3>
+          <p>Optional payload sealing via `P2P_SECRET` env. All CHAT packet payloads are encrypted on transmission and verified upon receipt using authenticated encryption.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⛓️</div>
+          <h3>1-Hop Message Relay</h3>
+          <p>Route through intermediate peers. When destination node is behind NAT or direct TCP fails, a mutual peer acts as a relay, forwarding the stream and returning `RELAY_ACK` back to source.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📁</div>
+          <h3>File Transfer Protocol</h3>
+          <p>Chunked base64 file sharing. Files are read into binary buffers, segmented into 16KB blocks, wrapped in `FILE_PART` envelopes, and reassembled in sequence at the destination.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💾</div>
+          <h3>SQLite Store & Forward</h3>
+          <p>A built-in transactional outbox handles flaky connections. Messages failing direct TCP delivery are stored in the peer's SQLite file and flushed once the destination peer is online.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📣</div>
+          <h3>Broadcast Flooding</h3>
+          <p>Peer-to-peer network-wide flooding. Utilizes distinct message IDs to prevent duplicates and decrementing TTL counters to avoid network congestion.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">👥</div>
+          <h3>Local Fan-out Groups</h3>
+          <p>Create local group sessions and broadcast message objects concurrently to all active socket channels in the group for synchronous group conversation.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quickstart Section -->
+    <section class="quickstart-section" id="quickstart">
+      <div class="section-header">
+        <h2 class="section-title">Quick Start CLI Guide</h2>
+        <p class="section-desc">Launch the system locally in less than a minute using Windows PowerShell.</p>
+      </div>
+      <div class="quickstart-container">
+        <div class="steps-nav">
+          <button class="step-btn active" data-step="1">1. Installation</button>
+          <button class="step-btn" data-step="2">2. Start Tracker</button>
+          <button class="step-btn" data-step="3">3. Launch Alice</button>
+          <button class="step-btn" data-step="4">4. Launch Bob</button>
+        </div>
+        <div class="steps-content">
+          <div class="step-pane active" id="step-pane-1">
+            <h4>Clone the repository and install dependency layers:</h4>
+            <div class="code-wrapper">
+              <pre><code>git clone https://github.com/Duyduy77/P2P-chat.git
+cd P2P-chat/peer-node
+npm install</code></pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+          <div class="step-pane" id="step-pane-2">
+            <h4>Run the Tracker (Bootstrap server) on port 3020:</h4>
+            <div class="code-wrapper">
+              <pre><code>cd bootstrap-server
+$env:BOOTSTRAP_PORT="3020"
+node server.js</code></pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+          <div class="step-pane" id="step-pane-3">
+            <h4>In a new terminal, launch Peer "Alice" on port 4101:</h4>
+            <div class="code-wrapper">
+              <pre><code>cd peer-node
+$env:PEER_ID="alice"
+$env:LISTEN_PORT="4101"
+$env:BOOTSTRAP_URL="http://127.0.0.1:3020"
+$env:WEB_PORT="8081"
+node peer.js</code></pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+          <div class="step-pane" id="step-pane-4">
+            <h4>In another terminal, launch Peer "Bob" on port 4102 and send a chat to Alice:</h4>
+            <div class="code-wrapper">
+              <pre><code>cd peer-node
+$env:PEER_ID="bob"
+$env:LISTEN_PORT="4102"
+$env:BOOTSTRAP_URL="http://127.0.0.1:3020"
+$env:WEB_PORT="8082"
+node peer.js
+
+# Inside Bob's console, send a direct chat:
+> send alice Hello Alice, I am Bob!</code></pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <div class="footer-container">
+      <p>&copy; 2026 P2P-Chat Project. Designed for distributed computing systems class.</p>
+      <p class="tech-stack-text">Built using Vanilla HTML5, Vanilla CSS3, & Node.js TCP Sockets.</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -216,6 +216,10 @@ function failPendingForHostPort(hostPortKey) {
 }
 
 function pushRecent(line) {
+  const last = recentEvents[recentEvents.length - 1];
+  if (last && last.line === String(line) && (Date.now() - last.t < 3000)) {
+    return; // Skip duplicate successive logs (like duplicate group ACKs)
+  }
   recentEvents.push({ t: Date.now(), line: String(line) });
   if (recentEvents.length > 100) recentEvents.shift();
 }
@@ -235,6 +239,7 @@ function getWebSnapshot() {
     bootstrap: BOOTSTRAP_URL,
     peers: [...peerDirectory.values()].map((p) => ({ id: p.peerId, address: p.address })),
     trackerOnline: [...trackerOnlineIds].filter((x) => x !== PEER_ID),
+    groups: [...groups.entries()].map(([k, v]) => ({ id: k, members: [...v] })),
     recent: recentEvents.slice(-40),
   };
 }
@@ -246,6 +251,12 @@ function getWebSnapshot() {
  */
 function deliverInboundChat(socket, chat) {
   if (!chat || chat.type !== 'CHAT' || !chat.msgId) return;
+
+  // Auto-learn group membership from incoming group message
+  if (chat.groupId && Array.isArray(chat.groupMembers)) {
+    groups.set(chat.groupId, new Set(chat.groupMembers));
+  }
+
   const dup = rememberSeen(chat.msgId);
   socket.write(
     encodeLine({ type: 'ACK', msgId: chat.msgId, from: PEER_ID, ts: Date.now() })
@@ -286,6 +297,7 @@ function processBCAST(socket, msg) {
     };
     for (const [, v] of peerDirectory) {
       if (v.peerId === PEER_ID) continue;
+      if (msg.from && v.peerId === msg.from) continue;
       writeToPeer(v.listenHost, v.listenPort, encodeLine(fwd));
     }
   }
@@ -581,6 +593,9 @@ function trackPendingDelivery(
       clearArm();
       if (pendingAck.get(ackMsgId) !== pend) return;
       pendingAck.delete(ackMsgId);
+      const g = logGroupId ? `[nhóm ${logGroupId}] ` : '';
+      const toSuffix = logGroupId ? '' : ` tới ${toPeerId}`;
+      pushRecent(`${g}(kênh outbound) CHAT từ ${PEER_ID}${toSuffix}: ${logContent}`);
       if (store) {
         void store
           .log('out', {
@@ -622,12 +637,20 @@ function trackPendingDelivery(
 function sendReliableChat(host, port, toPeerId, text, groupId) {
   const msgId = newMsgId();
   const sealed = sealChatPayload(text);
+
+  let groupMembers = null;
+  if (groupId) {
+    const g = groups.get(groupId);
+    if (g) groupMembers = [...g];
+  }
+
   const payload = {
     type: 'CHAT',
     msgId,
     from: PEER_ID,
     ts: Date.now(),
     ...(groupId ? { groupId } : {}),
+    ...(groupMembers ? { groupMembers } : {}),
     text: sealed.enc ? sealed : sealed.text,
   };
   const logPlain = sealed.enc ? '[encrypted]' : String(text);
@@ -756,6 +779,7 @@ async function flushOutboxOnce() {
 
 function broadcastNetwork(text) {
   const bcastId = newMsgId();
+  rememberBcastId(bcastId);
   const msg = {
     type: 'BCAST',
     bcastId,
@@ -1002,7 +1026,23 @@ async function main() {
   }
 
   if (WEB_PORT > 0) {
-    startWebDashboard(WEB_PORT, getWebSnapshot);
+    startWebDashboard(WEB_PORT, getWebSnapshot, {
+      send: async (to, text) => {
+        await sendToPeerId(to, text, null);
+      },
+      join: async (host, port) => {
+        joinPeer(host, port);
+      },
+      bcast: async (text) => {
+        broadcastNetwork(text);
+      },
+      groupAdd: async (groupId, members) => {
+        groups.set(groupId, new Set(members));
+      },
+      groupSend: async (groupId, text) => {
+        await sendGroup(groupId, text);
+      }
+    });
   }
   outboxTimer = setInterval(() => {
     void flushOutboxOnce().catch(() => {});
