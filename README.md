@@ -127,8 +127,7 @@ Tham số cuối là số vòng lặp (tùy chọn).
 Nếu chưa thấy peer trong cache: `sync` hoặc `join` tới cổng TCP của peer kia.
 
 
-## Giới hạn đáng ghi trong báo cáo
+## Giới hạn
 
 - Relay hỗ trợ **một chặng** (không routing đa hop tự động).  
 - Cấu hình nhóm (`group-add`) là **cục bộ** trên peer gửi.  
-- Giao diện web là **dashboard** (JSON), không thay hoàn toàn CLI chat.
