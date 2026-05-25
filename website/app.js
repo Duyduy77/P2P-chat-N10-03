@@ -645,11 +645,12 @@ if (isChatPage) {
       } else if (line.includes('Đã gửi file') || line.includes('Đã nhận file')) {
         const isSend = line.includes('Đã gửi file');
         if (isSend) {
-          const matches = line.match(/Đã gửi file "(.*?)" tới (.*?)\s*\((\d+)\s*byte\)/);
+          const matches = line.match(/Đã gửi file "(.*?)" tới (.*?)\s*(?:→\s*(.*?)\s*)?\((\d+)\s*byte\)/);
           if (matches) {
             filename = matches[1];
             const recipient = matches[2];
-            fileSize = matches[3];
+            filepath = matches[3] || '';
+            fileSize = matches[4];
             
             if (recipient === activeChatTarget) {
               isOutgoing = true;
@@ -707,6 +708,7 @@ if (isChatPage) {
           
           if (isFileMessage) {
             let fileActionHtml = '';
+            const cleanFilename = filename.replace(/^\d{13}_/, '');
             if (filepath) {
               fileActionHtml = `
                 <div class="file-card">
@@ -714,7 +716,7 @@ if (isChatPage) {
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
                   </div>
                   <div class="file-card-details">
-                    <span class="file-card-name" data-filepath="${escapeHtml(filepath)}" onclick="openLocalFile(this.dataset.filepath)">${escapeHtml(filename)}</span>
+                    <span class="file-card-name" data-filepath="${escapeHtml(filepath)}" onclick="openLocalFile(this.dataset.filepath)">${escapeHtml(cleanFilename)}</span>
                     <span class="file-card-size">${formatBytes(fileSize)}</span>
                   </div>
                   <button class="file-card-btn" data-filepath="${escapeHtml(filepath)}" onclick="exploreLocalFile(this.dataset.filepath)" title="Mở thư mục chứa tệp tin">
@@ -729,7 +731,7 @@ if (isChatPage) {
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
                   </div>
                   <div class="file-card-details">
-                    <span class="file-card-name" style="text-decoration: none; cursor: default;">${escapeHtml(filename)}</span>
+                    <span class="file-card-name" style="text-decoration: none; cursor: default;">${escapeHtml(cleanFilename)}</span>
                     <span class="file-card-size">${formatBytes(fileSize)}</span>
                   </div>
                 </div>

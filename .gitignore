@@ -4,3 +4,5 @@ node_modules/
 .gemini/
 peer-node/received/
 peer-node/temp/
+peer-node/sent/
+

@@ -193,23 +193,25 @@ function startWebDashboard(port, getSnapshot, apiHandlers = {}) {
             return;
           }
           if (apiHandlers.fileSend) {
-            const tempDir = path.join(__dirname, 'temp');
-            if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-            const tempPath = path.join(tempDir, body.filename);
+            const sentDir = path.join(__dirname, 'sent');
+            if (!fs.existsSync(sentDir)) fs.mkdirSync(sentDir, { recursive: true });
+            const safeName = body.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const filePath = path.join(sentDir, `${Date.now()}_${safeName}`);
 
-            // Ghi dữ liệu base64 vào file tạm
+            // Ghi dữ liệu base64 vào thư mục gửi đi
             const buf = Buffer.from(body.base64Data, 'base64');
-            fs.writeFileSync(tempPath, buf);
+            fs.writeFileSync(filePath, buf);
 
             try {
-              await apiHandlers.fileSend(body.to, tempPath);
+              await apiHandlers.fileSend(body.to, filePath);
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ ok: true }));
-            } finally {
-              // Dọn dẹp file tạm
+            } catch (err) {
+              // Dọn dẹp nếu gửi thất bại
               try {
-                if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+                if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
               } catch (_) {}
+              throw err;
             }
           } else {
             res.writeHead(501, { 'Content-Type': 'application/json' });
@@ -223,7 +225,7 @@ function startWebDashboard(port, getSnapshot, apiHandlers = {}) {
       return;
     }
 
-    // API: Mở file bằng ứng dụng mặc định
+    // API: Mở file bằng ứng dụng mặc định (có focus)
     if (req.method === 'POST' && url === '/api/file/open') {
       readJsonBody(req)
         .then(async (body) => {
@@ -233,16 +235,14 @@ function startWebDashboard(port, getSnapshot, apiHandlers = {}) {
             return;
           }
           
-          const cmd = `start "" "${body.filepath}"`;
+          const escapedPath = body.filepath.replace(/'/g, "''");
+          const cmd = `powershell -Command "$w = New-Object -ComObject WScript.Shell; $w.Run('\\"${escapedPath}\\"', 1, $false)"`;
           exec(cmd, (err) => {
-            if (err) {
-              res.writeHead(500, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: err.message }));
-            } else {
-              res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ ok: true }));
-            }
+            if (err) console.warn('[web] open file err:', err.message);
           });
+          
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
         })
         .catch(err => {
           res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -251,7 +251,7 @@ function startWebDashboard(port, getSnapshot, apiHandlers = {}) {
       return;
     }
 
-    // API: Mở thư mục chứa file và highlight file
+    // API: Mở thư mục chứa file và highlight file (có focus)
     if (req.method === 'POST' && url === '/api/file/explore') {
       readJsonBody(req)
         .then(async (body) => {
@@ -261,16 +261,14 @@ function startWebDashboard(port, getSnapshot, apiHandlers = {}) {
             return;
           }
           
-          const cmd = `explorer.exe /select,"${body.filepath}"`;
+          const escapedPath = body.filepath.replace(/'/g, "''");
+          const cmd = `powershell -Command "$w = New-Object -ComObject WScript.Shell; $w.Run('explorer.exe /select,\\"${escapedPath}\\"', 1, $false)"`;
           exec(cmd, (err) => {
-            if (err) {
-              res.writeHead(500, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: err.message }));
-            } else {
-              res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ ok: true }));
-            }
+            if (err) console.warn('[web] explore file err:', err.message);
           });
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
         })
         .catch(err => {
           res.writeHead(400, { 'Content-Type': 'application/json' });

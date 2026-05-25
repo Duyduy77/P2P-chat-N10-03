@@ -870,7 +870,7 @@ async function sendFileToPeer(targetId, filePath) {
     );
   }
   writeToPeer(addr.host, addr.port, encodeLine({ type: 'FILE_END', fileId, from: PEER_ID }));
-  const line = `Đã gửi file "${name}" tới ${targetId} (${buf.length} byte)`;
+  const line = `Đã gửi file "${name}" tới ${targetId} → ${filePath} (${buf.length} byte)`;
   console.log('[peer]', line);
   pushRecent(line);
 }
