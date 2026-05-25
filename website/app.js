@@ -709,8 +709,31 @@ if (isChatPage) {
           if (isFileMessage) {
             let fileActionHtml = '';
             const cleanFilename = filename.replace(/^\d{13}_/, '');
+            
+            let previewHtml = '';
+            if (filepath) {
+              const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
+              const isImage = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'].includes(ext);
+              const isVideo = ['.mp4', '.webm', '.ogg', '.mov'].includes(ext);
+              
+              if (isImage) {
+                previewHtml = `
+                  <div class="file-preview">
+                    <img src="/api/file/raw?path=${encodeURIComponent(filepath)}" alt="${escapeHtml(cleanFilename)}" data-filepath="${escapeHtml(filepath)}" onclick="openLocalFile(this.dataset.filepath)" />
+                  </div>
+                `;
+              } else if (isVideo) {
+                previewHtml = `
+                  <div class="file-preview">
+                    <video src="/api/file/raw?path=${encodeURIComponent(filepath)}" controls></video>
+                  </div>
+                `;
+              }
+            }
+
             if (filepath) {
               fileActionHtml = `
+                ${previewHtml}
                 <div class="file-card">
                   <div class="file-card-icon" style="color: var(--primary-light); display: flex; align-items: center;">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>

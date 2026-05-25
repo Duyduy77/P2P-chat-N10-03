@@ -5,7 +5,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -14,8 +14,15 @@ const MIME_TYPES = {
   '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon'
+  '.ico': 'image/x-icon',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.ogg': 'video/ogg',
+  '.mov': 'video/quicktime'
 };
 
 function startWebDashboard(port, getSnapshot, apiHandlers = {}) {
@@ -235,11 +242,17 @@ function startWebDashboard(port, getSnapshot, apiHandlers = {}) {
             return;
           }
           
-          const escapedPath = body.filepath.replace(/'/g, "''");
-          const cmd = `powershell -Command "$w = New-Object -ComObject WScript.Shell; $w.Run('\\"${escapedPath}\\"', 1, $false)"`;
-          exec(cmd, (err) => {
-            if (err) console.warn('[web] open file err:', err.message);
-          });
+          const helperPath = path.join(__dirname, 'focus-helper.ps1');
+          const child = spawn('powershell.exe', [
+            '-NoProfile',
+            '-ExecutionPolicy',
+            'Bypass',
+            '-File',
+            helperPath,
+            'open',
+            body.filepath
+          ]);
+          child.stderr.on('data', (data) => console.warn('[web] open helper err:', data.toString()));
           
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
@@ -261,11 +274,17 @@ function startWebDashboard(port, getSnapshot, apiHandlers = {}) {
             return;
           }
           
-          const escapedPath = body.filepath.replace(/'/g, "''");
-          const cmd = `powershell -Command "$w = New-Object -ComObject WScript.Shell; $w.Run('explorer.exe /select,\\"${escapedPath}\\"', 1, $false)"`;
-          exec(cmd, (err) => {
-            if (err) console.warn('[web] explore file err:', err.message);
-          });
+          const helperPath = path.join(__dirname, 'focus-helper.ps1');
+          const child = spawn('powershell.exe', [
+            '-NoProfile',
+            '-ExecutionPolicy',
+            'Bypass',
+            '-File',
+            helperPath,
+            'explore',
+            body.filepath
+          ]);
+          child.stderr.on('data', (data) => console.warn('[web] explore helper err:', data.toString()));
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
@@ -274,6 +293,47 @@ function startWebDashboard(port, getSnapshot, apiHandlers = {}) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: err.message }));
         });
+      return;
+    }
+
+    // API: Lấy file raw để hiển thị ảnh/video (preview)
+    if (req.method === 'GET' && url === '/api/file/raw') {
+      try {
+        const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+        const rawPath = u.searchParams.get('path');
+        if (!rawPath) {
+          res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+          res.end('Thiếu path');
+          return;
+        }
+
+        const absPath = path.resolve(rawPath);
+        const sentDir = path.join(__dirname, 'sent');
+        const receivedDir = path.join(__dirname, 'received');
+
+        // Ngăn chặn truy cập file ngoài thư mục sent/received
+        if (!absPath.startsWith(sentDir) && !absPath.startsWith(receivedDir)) {
+          res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+          res.end('Không có quyền truy cập');
+          return;
+        }
+
+        if (!fs.existsSync(absPath)) {
+          res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+          res.end('File không tồn tại');
+          return;
+        }
+
+        const ext = path.extname(absPath).toLowerCase();
+        const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': contentType });
+
+        const stream = fs.createReadStream(absPath);
+        stream.pipe(res);
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end(err.message);
+      }
       return;
     }
 

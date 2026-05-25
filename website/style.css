@@ -1454,3 +1454,31 @@ a:hover {
   background: rgba(255, 255, 255, 0.15);
   color: #fff;
 }
+
+/* Image & Video Previews in Chat */
+.file-preview {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+  display: block;
+}
+.file-preview img {
+  max-width: 280px;
+  max-height: 200px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: block;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.file-preview img:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+.file-preview video {
+  max-width: 280px;
+  max-height: 200px;
+  border-radius: var(--radius-sm);
+  display: block;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background: #000;
+}
