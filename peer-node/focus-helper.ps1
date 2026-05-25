@@ -13,7 +13,7 @@ public static extern bool SetForegroundWindow(IntPtr hWnd);
 $type = Add-Type -MemberDefinition $signature -Name "Win32Focus" -Namespace "Win32Focus" -PassThru
 
 if ($Action -eq "open") {
-    $p = Start-Process -FilePath $Path -PassThru
+    $p = Start-Process -FilePath $Path -PassThru -ErrorAction SilentlyContinue
     Start-Sleep -Milliseconds 800
 
     $filename = [System.IO.Path]::GetFileName($Path)

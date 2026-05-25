@@ -525,7 +525,7 @@ if (isChatPage) {
     
     const attachBtn = document.getElementById('attachBtn');
     if (attachBtn) {
-      if (target && target !== 'broadcast' && !target.startsWith('group:')) {
+      if (target) {
         attachBtn.removeAttribute('disabled');
       } else {
         attachBtn.setAttribute('disabled', 'true');
@@ -595,6 +595,9 @@ if (isChatPage) {
     if (!messagePane) return;
     messagePane.innerHTML = '';
     let msgCount = 0;
+    
+    // Set to keep track of rendered file messages in groups/broadcast to prevent duplicates
+    const renderedFiles = new Set();
 
     events.forEach(evt => {
       const line = evt.line;
@@ -645,14 +648,25 @@ if (isChatPage) {
       } else if (line.includes('Đã gửi file') || line.includes('Đã nhận file')) {
         const isSend = line.includes('Đã gửi file');
         if (isSend) {
-          const matches = line.match(/Đã gửi file "(.*?)" tới (.*?)\s*(?:→\s*(.*?)\s*)?\((\d+)\s*byte\)/);
+          const matches = line.match(/(?:\[nhóm (.*?)\]\s*)?(?:\[(Broadcast)\]\s*)?Đã gửi file "(.*?)" tới (.*?)\s*(?:→\s*(.*?)\s*)?\((\d+)\s*byte\)/);
           if (matches) {
-            filename = matches[1];
-            const recipient = matches[2];
-            filepath = matches[3] || '';
-            fileSize = matches[4];
+            groupId = matches[1] || null;
+            isBcast = matches[2] === 'Broadcast';
+            filename = matches[3];
+            const recipient = matches[4];
+            filepath = matches[5] || '';
+            fileSize = matches[6];
             
-            if (recipient === activeChatTarget) {
+            let matchTarget = false;
+            if (groupId) {
+              matchTarget = (activeChatTarget === `group:${groupId}`);
+            } else if (isBcast) {
+              matchTarget = (activeChatTarget === 'broadcast');
+            } else {
+              matchTarget = (recipient === activeChatTarget);
+            }
+
+            if (matchTarget) {
               isOutgoing = true;
               sender = localPeerId;
               isFileMessage = true;
@@ -660,14 +674,25 @@ if (isChatPage) {
             }
           }
         } else {
-          const matches = line.match(/Đã nhận file "(.*?)" từ (.*?)\s*→\s*(.*?)\s*\((\d+)\s*byte\)/);
+          const matches = line.match(/(?:\[nhóm (.*?)\]\s*)?(?:\[(Broadcast)\]\s*)?Đã nhận file "(.*?)" từ (.*?)\s*→\s*(.*?)\s*\((\d+)\s*byte\)/);
           if (matches) {
-            filename = matches[1];
-            const senderId = matches[2];
-            filepath = matches[3];
-            fileSize = matches[4];
+            groupId = matches[1] || null;
+            isBcast = matches[2] === 'Broadcast';
+            filename = matches[3];
+            const senderId = matches[4];
+            filepath = matches[5];
+            fileSize = matches[6];
             
-            if (senderId === activeChatTarget) {
+            let matchTarget = false;
+            if (groupId) {
+              matchTarget = (activeChatTarget === `group:${groupId}`);
+            } else if (isBcast) {
+              matchTarget = (activeChatTarget === 'broadcast');
+            } else {
+              matchTarget = (senderId === activeChatTarget);
+            }
+
+            if (matchTarget) {
               isIncoming = true;
               sender = senderId;
               isFileMessage = true;
@@ -696,6 +721,15 @@ if (isChatPage) {
               show = true;
             }
           }
+        }
+
+        // Deduplicate file messages for group/broadcast outgoing logs (since one log is printed per member)
+        if (show && isFileMessage && (groupId || isBcast)) {
+          const fileKey = `${groupId || 'bcast'}_${isOutgoing ? 'out' : 'in'}_${filename}_${fileSize}`;
+          if (renderedFiles.has(fileKey)) {
+            return; // skip duplicate send logs
+          }
+          renderedFiles.add(fileKey);
         }
 
         if (show) {

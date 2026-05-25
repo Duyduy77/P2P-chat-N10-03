@@ -340,6 +340,7 @@ function processFileBegin(msg) {
     total: msg.totalChunks,
     from: msg.from,
     chunks: /** @type {Buffer[]} */ ([]),
+    groupId: msg.groupId || null
   });
   console.log(`[peer] FILE bắt đầu: ${msg.name} (${msg.totalChunks} phần) từ ${msg.from}`);
 }
@@ -361,7 +362,9 @@ function processFileEnd(msg) {
   const safe = st.name.replace(/[^a-zA-Z0-9._-]/g, '_');
   const fp = path.join(dir, `${Date.now()}_${safe}`);
   fs.writeFileSync(fp, out);
-  const line = `Đã nhận file "${st.name}" từ ${st.from} → ${fp} (${out.length} byte)`;
+  
+  const prefix = st.groupId ? (st.groupId === 'broadcast' ? '[Broadcast] ' : `[nhóm ${st.groupId}] `) : '';
+  const line = `${prefix}Đã nhận file "${st.name}" từ ${st.from} → ${fp} (${out.length} byte)`;
   console.log('[peer]', line);
   pushRecent(line);
 }
@@ -827,7 +830,7 @@ function broadcastNetwork(text) {
   }
 }
 
-async function sendFileToPeer(targetId, filePath) {
+async function sendFileToPeer(targetId, filePath, groupId = null) {
   const addr = resolvePeer(targetId);
   if (!addr) {
     console.warn('[peer] không có địa chỉ peer:', targetId);
@@ -853,6 +856,7 @@ async function sendFileToPeer(targetId, filePath) {
       totalChunks: total,
       from: PEER_ID,
       ts: Date.now(),
+      groupId
     })
   );
   for (let i = 0; i < total; i++) {
@@ -870,9 +874,41 @@ async function sendFileToPeer(targetId, filePath) {
     );
   }
   writeToPeer(addr.host, addr.port, encodeLine({ type: 'FILE_END', fileId, from: PEER_ID }));
-  const line = `Đã gửi file "${name}" tới ${targetId} → ${filePath} (${buf.length} byte)`;
+  
+  const prefix = groupId ? (groupId === 'broadcast' ? '[Broadcast] ' : `[nhóm ${groupId}] `) : '';
+  const line = `${prefix}Đã gửi file "${name}" tới ${targetId} → ${filePath} (${buf.length} byte)`;
   console.log('[peer]', line);
   pushRecent(line);
+}
+
+async function handleFileSend(to, filePath) {
+  if (to === 'broadcast') {
+    const targets = [...peerDirectory.values()].map(p => p.peerId).filter(id => id !== PEER_ID);
+    for (const tid of targets) {
+      try {
+        await sendFileToPeer(tid, filePath, 'broadcast');
+      } catch (err) {
+        console.warn(`[peer] gửi file broadcast tới ${tid} thất bại:`, err.message);
+      }
+    }
+  } else if (to.startsWith('group:')) {
+    const groupId = to.substring(6);
+    const g = groups.get(groupId);
+    if (!g || g.size === 0) {
+      console.warn('[peer] nhóm không tồn tại hoặc rỗng:', groupId);
+      return;
+    }
+    const targets = [...g].filter(id => id !== PEER_ID);
+    for (const tid of targets) {
+      try {
+        await sendFileToPeer(tid, filePath, groupId);
+      } catch (err) {
+        console.warn(`[peer] gửi file nhóm ${groupId} tới ${tid} thất bại:`, err.message);
+      }
+    }
+  } else {
+    await sendFileToPeer(to, filePath);
+  }
 }
 
 async function sendGroup(groupId, text) {
@@ -1075,7 +1111,7 @@ async function main() {
         await sendGroup(groupId, text);
       },
       fileSend: async (to, filePath) => {
-        await sendFileToPeer(to, filePath);
+        await handleFileSend(to, filePath);
       }
     });
   }
