@@ -710,20 +710,24 @@ if (isChatPage) {
             if (filepath) {
               fileActionHtml = `
                 <div class="file-card">
-                  <div class="file-card-icon">📄</div>
+                  <div class="file-card-icon" style="color: var(--primary-light); display: flex; align-items: center;">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                  </div>
                   <div class="file-card-details">
-                    <span class="file-card-name" onclick="openLocalFile('${escapeHtml(filepath)}')">${escapeHtml(filename)}</span>
+                    <span class="file-card-name" data-filepath="${escapeHtml(filepath)}" onclick="openLocalFile(this.dataset.filepath)">${escapeHtml(filename)}</span>
                     <span class="file-card-size">${formatBytes(fileSize)}</span>
                   </div>
-                  <button class="file-card-btn" onclick="exploreLocalFile('${escapeHtml(filepath)}')" title="Mở thư mục chứa file">
-                    📁
+                  <button class="file-card-btn" data-filepath="${escapeHtml(filepath)}" onclick="exploreLocalFile(this.dataset.filepath)" title="Mở thư mục chứa tệp tin">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                   </button>
                 </div>
               `;
             } else {
               fileActionHtml = `
                 <div class="file-card">
-                  <div class="file-card-icon">📄</div>
+                  <div class="file-card-icon" style="color: var(--text-muted); display: flex; align-items: center;">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                  </div>
                   <div class="file-card-details">
                     <span class="file-card-name" style="text-decoration: none; cursor: default;">${escapeHtml(filename)}</span>
                     <span class="file-card-size">${formatBytes(fileSize)}</span>
