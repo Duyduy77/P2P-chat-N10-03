@@ -2,3 +2,5 @@ node_modules/
 *.db
 *.log
 .gemini/
+peer-node/received/
+peer-node/temp/

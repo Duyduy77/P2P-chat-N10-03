@@ -606,6 +606,11 @@ if (isChatPage) {
       let groupId = null;
       let isBcast = false;
 
+      let isFileMessage = false;
+      let filename = '';
+      let fileSize = '';
+      let filepath = '';
+
       // Detect chat type
       if (line.includes('CHAT từ')) {
         const matches = line.match(/(?:\[nhóm (.*?)\]\s*)?(?:\(kênh outbound\)\s*)?CHAT từ (.*?)(?:\s*tới\s+(.*?))?:\s*(.*)/);
@@ -642,27 +647,30 @@ if (isChatPage) {
         if (isSend) {
           const matches = line.match(/Đã gửi file "(.*?)" tới (.*?)\s*\((\d+)\s*byte\)/);
           if (matches) {
-            const filename = matches[1];
+            filename = matches[1];
             const recipient = matches[2];
-            const size = matches[3];
+            fileSize = matches[3];
             
             if (recipient === activeChatTarget) {
               isOutgoing = true;
               sender = localPeerId;
-              text = `📎 Gửi file: ${filename} (${formatBytes(size)})`;
+              isFileMessage = true;
+              text = `📎 Gửi file: ${filename} (${formatBytes(fileSize)})`;
             }
           }
         } else {
           const matches = line.match(/Đã nhận file "(.*?)" từ (.*?)\s*→\s*(.*?)\s*\((\d+)\s*byte\)/);
           if (matches) {
-            const filename = matches[1];
+            filename = matches[1];
             const senderId = matches[2];
-            const size = matches[4];
+            filepath = matches[3];
+            fileSize = matches[4];
             
             if (senderId === activeChatTarget) {
               isIncoming = true;
               sender = senderId;
-              text = `📎 Nhận file: ${filename} (${formatBytes(size)})`;
+              isFileMessage = true;
+              text = `📎 Nhận file: ${filename} (${formatBytes(fileSize)})`;
             }
           }
         }
@@ -697,11 +705,44 @@ if (isChatPage) {
           const senderLabel = isIncoming ? `<span class="msg-sender">${sender}</span>` : '';
           const dateStr = new Date(evt.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           
-          bubble.innerHTML = `
-            ${senderLabel}
-            <div class="msg-text">${escapeHtml(text)}</div>
-            <div class="msg-time">${dateStr}</div>
-          `;
+          if (isFileMessage) {
+            let fileActionHtml = '';
+            if (filepath) {
+              fileActionHtml = `
+                <div class="file-card">
+                  <div class="file-card-icon">📄</div>
+                  <div class="file-card-details">
+                    <span class="file-card-name" onclick="openLocalFile('${escapeHtml(filepath)}')">${escapeHtml(filename)}</span>
+                    <span class="file-card-size">${formatBytes(fileSize)}</span>
+                  </div>
+                  <button class="file-card-btn" onclick="exploreLocalFile('${escapeHtml(filepath)}')" title="Mở thư mục chứa file">
+                    📁
+                  </button>
+                </div>
+              `;
+            } else {
+              fileActionHtml = `
+                <div class="file-card">
+                  <div class="file-card-icon">📄</div>
+                  <div class="file-card-details">
+                    <span class="file-card-name" style="text-decoration: none; cursor: default;">${escapeHtml(filename)}</span>
+                    <span class="file-card-size">${formatBytes(fileSize)}</span>
+                  </div>
+                </div>
+              `;
+            }
+            bubble.innerHTML = `
+              ${senderLabel}
+              ${fileActionHtml}
+              <div class="msg-time">${dateStr}</div>
+            `;
+          } else {
+            bubble.innerHTML = `
+              ${senderLabel}
+              <div class="msg-text">${escapeHtml(text)}</div>
+              <div class="msg-time">${dateStr}</div>
+            `;
+          }
           messagePane.appendChild(bubble);
         }
       }
@@ -897,6 +938,44 @@ if (isChatPage) {
     const i = Math.floor(Math.log(b) / Math.log(k));
     return parseFloat((b / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
+
+  window.openLocalFile = async function(filepath) {
+    if (!filepath) return;
+    try {
+      const res = await fetch('/api/file/open', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filepath })
+      });
+      const data = await res.json();
+      if (res.status === 200 && data.ok) {
+        logLiveSystem(`Đã mở file: ${filepath}`);
+      } else {
+        logLiveWarn(`Lỗi mở file: ${data.error}`);
+      }
+    } catch (err) {
+      logLiveWarn(`Lỗi mạng khi mở file: ${err.message}`);
+    }
+  };
+
+  window.exploreLocalFile = async function(filepath) {
+    if (!filepath) return;
+    try {
+      const res = await fetch('/api/file/explore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filepath })
+      });
+      const data = await res.json();
+      if (res.status === 200 && data.ok) {
+        logLiveSystem(`Đã mở thư mục chứa file: ${filepath}`);
+      } else {
+        logLiveWarn(`Lỗi hiển thị file: ${data.error}`);
+      }
+    } catch (err) {
+      logLiveWarn(`Lỗi mạng khi hiển thị thư mục: ${err.message}`);
+    }
+  };
 
   function escapeHtml(s) {
     return String(s)

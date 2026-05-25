@@ -5,6 +5,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -214,6 +215,62 @@ function startWebDashboard(port, getSnapshot, apiHandlers = {}) {
             res.writeHead(501, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'API handler fileSend chưa được đăng ký' }));
           }
+        })
+        .catch(err => {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        });
+      return;
+    }
+
+    // API: Mở file bằng ứng dụng mặc định
+    if (req.method === 'POST' && url === '/api/file/open') {
+      readJsonBody(req)
+        .then(async (body) => {
+          if (!body.filepath) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'filepath là bắt buộc' }));
+            return;
+          }
+          
+          const cmd = `start "" "${body.filepath}"`;
+          exec(cmd, (err) => {
+            if (err) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: err.message }));
+            } else {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: true }));
+            }
+          });
+        })
+        .catch(err => {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        });
+      return;
+    }
+
+    // API: Mở thư mục chứa file và highlight file
+    if (req.method === 'POST' && url === '/api/file/explore') {
+      readJsonBody(req)
+        .then(async (body) => {
+          if (!body.filepath) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'filepath là bắt buộc' }));
+            return;
+          }
+          
+          const cmd = `explorer.exe /select,"${body.filepath}"`;
+          exec(cmd, (err) => {
+            if (err) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: err.message }));
+            } else {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: true }));
+            }
+          });
         })
         .catch(err => {
           res.writeHead(400, { 'Content-Type': 'application/json' });
