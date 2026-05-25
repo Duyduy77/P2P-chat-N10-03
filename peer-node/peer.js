@@ -106,12 +106,22 @@ function mergePeerRecord(p) {
   const listenHost = String(p.listenHost || '127.0.0.1').trim();
   const listenPort = Number(p.listenPort);
   if (!Number.isFinite(listenPort) || listenPort <= 0) return;
+
+  const key = p.peerId;
+  const exists = peerDirectory.has(key);
+
   peerDirectory.set(p.peerId, {
     peerId: p.peerId,
     listenHost,
     listenPort,
     address: `${listenHost}:${listenPort}`,
   });
+
+  if (!exists) {
+    const line = `[Hệ thống] Đã phát hiện peer mới: ${p.peerId} (${listenHost}:${listenPort})`;
+    console.log(line);
+    pushRecent(line);
+  }
 }
 
 /** Gossip: không gửi cả mạng — giới hạn để tránh gói quá lớn */
@@ -176,7 +186,27 @@ async function fetchPeers() {
     console.warn('[peer] lấy danh sách peer thất bại:', r.status, r.body);
     return;
   }
-  trackerOnlineIds = new Set(r.body.peers.map((p) => p.peerId));
+  const newOnlineIds = new Set(r.body.peers.map((p) => p.peerId));
+
+  // Phát hiện peer rời mạng (offline)
+  for (const oldId of trackerOnlineIds) {
+    if (oldId !== PEER_ID && !newOnlineIds.has(oldId)) {
+      const line = `[Hệ thống] Peer rời mạng (offline): ${oldId}`;
+      console.log(line);
+      pushRecent(line);
+    }
+  }
+
+  // Phát hiện peer mới online
+  for (const newId of newOnlineIds) {
+    if (newId !== PEER_ID && !trackerOnlineIds.has(newId)) {
+      const line = `[Hệ thống] Peer tham gia mạng (online): ${newId}`;
+      console.log(line);
+      pushRecent(line);
+    }
+  }
+
+  trackerOnlineIds = newOnlineIds;
 
   for (const p of r.body.peers) {
     mergePeerRecord({

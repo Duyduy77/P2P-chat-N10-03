@@ -493,8 +493,9 @@ if (isChatPage) {
               <p>${peer.address}</p>
             </div>
           </div>
-          <div class="contact-status">
+          <div class="contact-status" style="flex-direction: column; align-items: flex-end; gap: 0.2rem;">
             <span class="contact-status-dot ${isOnline ? 'online' : ''}"></span>
+            <span style="font-size: 0.7rem; font-weight: 500; color: ${isOnline ? 'var(--accent-green)' : 'var(--text-muted)'}">${isOnline ? 'Online' : 'Offline'}</span>
           </div>
         </div>
       `;
