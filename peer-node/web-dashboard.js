@@ -182,6 +182,46 @@ function startWebDashboard(port, getSnapshot, apiHandlers = {}) {
       return;
     }
 
+    // API: Gửi file trực tiếp P2P
+    if (req.method === 'POST' && url === '/api/file/send') {
+      readJsonBody(req)
+        .then(async (body) => {
+          if (!body.to || !body.filename || !body.base64Data) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'to, filename và base64Data là bắt buộc' }));
+            return;
+          }
+          if (apiHandlers.fileSend) {
+            const tempDir = path.join(__dirname, 'temp');
+            if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+            const tempPath = path.join(tempDir, body.filename);
+
+            // Ghi dữ liệu base64 vào file tạm
+            const buf = Buffer.from(body.base64Data, 'base64');
+            fs.writeFileSync(tempPath, buf);
+
+            try {
+              await apiHandlers.fileSend(body.to, tempPath);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: true }));
+            } finally {
+              // Dọn dẹp file tạm
+              try {
+                if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+              } catch (_) {}
+            }
+          } else {
+            res.writeHead(501, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'API handler fileSend chưa được đăng ký' }));
+          }
+        })
+        .catch(err => {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        });
+      return;
+    }
+
     // Phục vụ file tĩnh từ thư mục /website/
     let filePath = url === '/' ? '/index.html' : url;
     // Ngăn chặn tấn công directory traversal

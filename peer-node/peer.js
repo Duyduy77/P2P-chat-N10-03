@@ -361,7 +361,7 @@ function processFileEnd(msg) {
   const safe = st.name.replace(/[^a-zA-Z0-9._-]/g, '_');
   const fp = path.join(dir, `${Date.now()}_${safe}`);
   fs.writeFileSync(fp, out);
-  const line = `Đã nhận file "${st.name}" → ${fp} (${out.length} byte)`;
+  const line = `Đã nhận file "${st.name}" từ ${st.from} → ${fp} (${out.length} byte)`;
   console.log('[peer]', line);
   pushRecent(line);
 }
@@ -870,7 +870,9 @@ async function sendFileToPeer(targetId, filePath) {
     );
   }
   writeToPeer(addr.host, addr.port, encodeLine({ type: 'FILE_END', fileId, from: PEER_ID }));
-  console.log('[peer] đã gửi file', name, '→', targetId);
+  const line = `Đã gửi file "${name}" tới ${targetId} (${buf.length} byte)`;
+  console.log('[peer]', line);
+  pushRecent(line);
 }
 
 async function sendGroup(groupId, text) {
@@ -1071,6 +1073,9 @@ async function main() {
       },
       groupSend: async (groupId, text) => {
         await sendGroup(groupId, text);
+      },
+      fileSend: async (to, filePath) => {
+        await sendFileToPeer(to, filePath);
       }
     });
   }

@@ -1352,3 +1352,26 @@ a:hover {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Attachment button */
+.btn-attach {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.btn-attach:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(110, 86, 240, 0.05);
+}
+.btn-attach:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

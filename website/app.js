@@ -523,6 +523,15 @@ if (isChatPage) {
     if (messageInput) messageInput.removeAttribute('disabled');
     if (sendBtn) sendBtn.removeAttribute('disabled');
     
+    const attachBtn = document.getElementById('attachBtn');
+    if (attachBtn) {
+      if (target && target !== 'broadcast' && !target.startsWith('group:')) {
+        attachBtn.removeAttribute('disabled');
+      } else {
+        attachBtn.setAttribute('disabled', 'true');
+      }
+    }
+    
     if (target === 'broadcast') {
       if (chatTargetName) chatTargetName.textContent = 'Broadcast Flooding';
       if (chatTargetSub) chatTargetSub.textContent = 'Sends message to all connected peers in network';
@@ -626,6 +635,35 @@ if (isChatPage) {
           if (matches) {
             sender = matches[1];
             text = matches[2];
+          }
+        }
+      } else if (line.includes('Đã gửi file') || line.includes('Đã nhận file')) {
+        const isSend = line.includes('Đã gửi file');
+        if (isSend) {
+          const matches = line.match(/Đã gửi file "(.*?)" tới (.*?)\s*\((\d+)\s*byte\)/);
+          if (matches) {
+            const filename = matches[1];
+            const recipient = matches[2];
+            const size = matches[3];
+            
+            if (recipient === activeChatTarget) {
+              isOutgoing = true;
+              sender = localPeerId;
+              text = `📎 Gửi file: ${filename} (${formatBytes(size)})`;
+            }
+          }
+        } else {
+          const matches = line.match(/Đã nhận file "(.*?)" từ (.*?)\s*→\s*(.*?)\s*\((\d+)\s*byte\)/);
+          if (matches) {
+            const filename = matches[1];
+            const senderId = matches[2];
+            const size = matches[4];
+            
+            if (senderId === activeChatTarget) {
+              isIncoming = true;
+              sender = senderId;
+              text = `📎 Nhận file: ${filename} (${formatBytes(size)})`;
+            }
           }
         }
       }
@@ -799,6 +837,66 @@ if (isChatPage) {
     logLiveSystem('Đang làm mới danh sách peer từ API...');
     checkLiveStatus();
   };
+
+  // Handle P2P File Sending via attachment button
+  const fileInput = document.getElementById('fileInput');
+  const attachBtn = document.getElementById('attachBtn');
+  if (attachBtn && fileInput) {
+    attachBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const confirmSend = confirm(`Bạn có muốn gửi file "${file.name}" tới ${activeChatTarget} không?`);
+      if (!confirmSend) {
+        fileInput.value = '';
+        return;
+      }
+
+      logLiveSystem(`Đang đọc file "${file.name}"...`);
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const dataUrl = e.target.result;
+        const base64Data = dataUrl.split(',')[1];
+
+        logLiveSystem(`Đang gửi file "${file.name}"...`);
+        try {
+          const res = await fetch('/api/file/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: activeChatTarget,
+              filename: file.name,
+              base64Data: base64Data
+            })
+          });
+
+          const data = await res.json();
+          if (res.status === 200 && data.ok) {
+            logLiveSystem(`Đã hoàn tất gửi file "${file.name}"!`);
+            checkLiveStatus();
+          } else {
+            logLiveWarn(`Lỗi khi gửi file: ${data.error || 'Lỗi không xác định'}`);
+          }
+        } catch (err) {
+          logLiveWarn(`Lỗi kết nối khi gửi file: ${err.message}`);
+        }
+        fileInput.value = '';
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function formatBytes(bytes) {
+    const b = Number(bytes);
+    if (!Number.isFinite(b) || b <= 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(b) / Math.log(k));
+    return parseFloat((b / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
 
   function escapeHtml(s) {
     return String(s)
