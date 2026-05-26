@@ -17,7 +17,6 @@ Mạng chat ngang hàng: peer trao đổi tin qua **TCP**; **bootstrap/tracker**
 | `scripts/smoke-integration.js` | Kiểm thử tự động: bootstrap + 2 peer + gửi tin |
 | `scripts/churn.js` | Mô phỏng churn (đăng ký / hủy đăng ký lặp) |
 
-**Lưu ý:** Chỉ dùng thư mục `bootstrap-server` (có dấu gạch ngang). Thư mục `bootstrap server` (có khoảng trắng) nếu có là bản trùng — dễ nhầm khi chạy.
 
 ## Cài đặt
 
